@@ -15,6 +15,7 @@ import java.net.Socket;
 @AllArgsConstructor
 public class SimpleClient implements RPCClient {
     private final Register register;
+    private Socket socket;
 
     public SimpleClient() {
         register = new ZkRegister();
@@ -24,7 +25,7 @@ public class SimpleClient implements RPCClient {
     public Response sendRequest(Request request) {
         InetSocketAddress address = register.serviceDiscovery(request.getInterfaceName());
         try {
-            Socket socket = new Socket(address.getHostName(), address.getPort());
+            socket = new Socket(address.getHostName(), address.getPort());
             // seed request message
             ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
             oos.writeObject(request);
@@ -35,6 +36,17 @@ public class SimpleClient implements RPCClient {
             return (Response) ois.readObject();
         } catch (IOException | ClassNotFoundException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public void stop() {
+        if (!socket.isClosed()) {
+            try {
+                socket.close();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
         }
     }
 }

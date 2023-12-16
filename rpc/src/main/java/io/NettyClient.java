@@ -69,6 +69,13 @@ public class NettyClient implements RPCClient {
         }
     }
 
+    @Override
+    public void stop() {
+        if (!eventLoopGroup.isShutdown()) {
+            eventLoopGroup.shutdownGracefully();
+        }
+    }
+
     private static class NettyClientHandler extends SimpleChannelInboundHandler<Response> {
         @Override
         protected void channelRead0(ChannelHandlerContext ctx, Response msg) {

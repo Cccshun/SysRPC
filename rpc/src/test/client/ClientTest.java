@@ -24,5 +24,6 @@ public class ClientTest {
         Blog blog = proxyB.queryBlog(new Random().nextInt(0, 10));
         proxyB.insertBlog(blog);
         log.info(blog.toString());
+        client.shutdown();
     }
 }

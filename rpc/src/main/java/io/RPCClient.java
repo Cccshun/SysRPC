@@ -5,4 +5,6 @@ import common.message.Response;
 
 public interface RPCClient {
     Response sendRequest(Request request);
+
+    void stop();
 }

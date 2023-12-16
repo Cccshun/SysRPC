@@ -32,4 +32,8 @@ public class ClientStub implements InvocationHandler {
     public <T> T getProxy(Class<T> clazz) {
         return (T) Proxy.newProxyInstance(clazz.getClassLoader(), new Class[]{clazz}, this);
     }
+
+    public void shutdown() {
+        rpcClient.stop();
+    }
 }
