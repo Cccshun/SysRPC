@@ -20,7 +20,6 @@ import java.net.InetSocketAddress;
 @Slf4j
 public class NettyClient implements RPCClient {
 
-
     private static final Bootstrap bootstrap;
     private static final EventLoopGroup eventLoopGroup;
     private final Register register;
@@ -30,7 +29,7 @@ public class NettyClient implements RPCClient {
     }
 
     static {
-        eventLoopGroup = new NioEventLoopGroup();
+        eventLoopGroup = new NioEventLoopGroup(2);
         bootstrap = new Bootstrap();
         bootstrap.group(eventLoopGroup)
                 .channel(NioSocketChannel.class)
@@ -52,12 +51,10 @@ public class NettyClient implements RPCClient {
 
     @Override
     public Response sendRequest(Request request) {
-        InetSocketAddress socketAddress = register.serviceDiscovery(request.getInterfaceName());
-        String host = socketAddress.getHostName();
-        int port = socketAddress.getPort();
+        InetSocketAddress address = register.serviceDiscovery(request.getInterfaceName());
         Channel channel = null;
         try {
-            ChannelFuture future = bootstrap.connect(host, port).sync();
+            ChannelFuture future = bootstrap.connect(address.getHostName(), address.getPort()).sync();
             channel = future.channel();
             channel.writeAndFlush(request);
             channel.closeFuture().sync();
@@ -68,20 +65,20 @@ public class NettyClient implements RPCClient {
             return Response.fail(e.toString());
         } finally {
             if (channel != null)
-                channel.closeFuture();
+                channel.close();
         }
     }
 
     private static class NettyClientHandler extends SimpleChannelInboundHandler<Response> {
         @Override
-        protected void channelRead0(ChannelHandlerContext ctx, Response msg) throws Exception {
+        protected void channelRead0(ChannelHandlerContext ctx, Response msg) {
             AttributeKey<Response> key = AttributeKey.valueOf("Response");
             ctx.channel().attr(key).set(msg);
             ctx.close();
         }
 
         @Override
-        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
             cause.printStackTrace();
             ctx.close();
         }

@@ -5,6 +5,7 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.zookeeper.CreateMode;
+import org.apache.zookeeper.KeeperException;
 
 import java.net.InetSocketAddress;
 import java.util.List;
@@ -13,6 +14,7 @@ import java.util.List;
 public class ZkRegister implements Register {
     private final CuratorFramework client;
     private static final String ROOT_PATH = "Sys";
+    private final LoadBalance loadBalancer;
 
     public ZkRegister() {
         client = CuratorFrameworkFactory.builder()
@@ -22,7 +24,19 @@ public class ZkRegister implements Register {
                 .namespace(ROOT_PATH)
                 .build();
         client.start();
-        log.info("zookeeper connect success");
+        loadBalancer = new RoundLoadBalance();
+    }
+
+    public ZkRegister(CuratorFramework curator) {
+        client = curator;
+        client.start();
+        loadBalancer = new RoundLoadBalance();
+    }
+
+    public ZkRegister(CuratorFramework curator, LoadBalance loadBalancer) {
+        client = curator;
+        client.start();
+        this.loadBalancer = loadBalancer;
     }
 
     @Override
@@ -35,7 +49,9 @@ public class ZkRegister implements Register {
             }
             // register ephemeral address of service provider
             String node = servicePath + "/" + getServiceAddress(socketAddress);
-            client.create().creatingParentsIfNeeded().withMode(CreateMode.EPHEMERAL).forPath(node);
+            client.create().withMode(CreateMode.EPHEMERAL).forPath(node);
+        } catch (KeeperException.NodeExistsException e) {
+            log.info(e.getMessage());
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -46,8 +62,7 @@ public class ZkRegister implements Register {
         String servicePath = "/" + serviceName;
         try {
             List<String> nodeList = client.getChildren().forPath(servicePath);
-            String node = nodeList.get(0);
-            //TODO balanced load
+            String node = loadBalancer.balance(nodeList);
             return parseAddress(node);
         } catch (Exception e) {
             throw new RuntimeException(e);
