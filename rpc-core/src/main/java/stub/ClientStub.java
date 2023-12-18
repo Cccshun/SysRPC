@@ -3,8 +3,8 @@ package stub;
 import common.constants.SerializerType;
 import protocol.Request;
 import protocol.Response;
-import io.NettyClient;
-import io.RPCClient;
+import transport.netty.client.NettyClient;
+import transport.RPCClient;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -15,7 +15,7 @@ import java.lang.reflect.Proxy;
 @AllArgsConstructor
 @Slf4j
 public class ClientStub implements InvocationHandler {
-    private byte serialization;
+    private int serialization;
     private RPCClient rpcClient;
 
     public ClientStub() {
@@ -23,7 +23,7 @@ public class ClientStub implements InvocationHandler {
         this.serialization = SerializerType.JDKSERIALIZER;
     }
 
-    public ClientStub(byte serialization) {
+    public ClientStub(int serialization) {
         this.rpcClient = new NettyClient();
         this.serialization = serialization;
     }
@@ -34,7 +34,7 @@ public class ClientStub implements InvocationHandler {
     }
 
     @Override
-    public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+    public Object invoke(Object proxy, Method method, Object[] args) {
         // 封装调用方法和参数
         Request request = Request.builder()
                 .interfaceName(method.getDeclaringClass().getName())
@@ -42,7 +42,7 @@ public class ClientStub implements InvocationHandler {
                 .params(args)
                 .paramsType(method.getParameterTypes()).build();
 
-        // 发送请求并接收返回结果
+        // 发送请求, 异步接收结果
         Response response = rpcClient.sendRequest(request, serialization);
         return response.getData();
     }

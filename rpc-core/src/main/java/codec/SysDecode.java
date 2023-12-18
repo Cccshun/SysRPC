@@ -1,6 +1,5 @@
 package codec;
 
-import common.constants.MessageType;
 import protocol.SysMessage;
 import serialization.Serializer;
 import io.netty.buffer.ByteBuf;
@@ -28,9 +27,6 @@ public class SysDecode extends ByteToMessageDecoder {
         }
         if (byteBuf.readableBytes() < dataLength) {
             byteBuf.resetReaderIndex();
-            return;
-        }
-        if (msgType != MessageType.REQUEST && msgType != MessageType.RESPONSE) {
             return;
         }
 

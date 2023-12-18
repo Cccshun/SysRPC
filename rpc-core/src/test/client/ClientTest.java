@@ -2,7 +2,7 @@ package test.client;
 
 import common.pojo.Blog;
 import common.pojo.User;
-import io.NettyClient;
+import transport.netty.client.NettyClient;
 import lombok.extern.slf4j.Slf4j;
 import service.OpenServiceA;
 import service.OpenServiceB;
@@ -24,6 +24,6 @@ public class ClientTest {
         Blog blog = proxyB.queryBlog(new Random().nextInt(0, 10));
         proxyB.insertBlog(blog);
         log.info(blog.toString());
-        client.shutdown();
+//        client.shutdown();
     }
 }

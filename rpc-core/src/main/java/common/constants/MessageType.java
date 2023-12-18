@@ -7,4 +7,5 @@ public class MessageType {
      */
     public static final int REQUEST = 0;
     public static final int RESPONSE = 1;
+    public static final int HeartBeat = 2;
 }

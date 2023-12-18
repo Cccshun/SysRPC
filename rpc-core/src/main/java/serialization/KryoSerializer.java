@@ -5,45 +5,45 @@ import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
 import common.constants.SerializerType;
 import lombok.extern.slf4j.Slf4j;
+import org.checkerframework.checker.units.qual.K;
 import protocol.SysMessage;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 
 
 @Slf4j
 public class KryoSerializer implements Serializer {
 
-    private static final Kryo kryo;
-
-    static {
-        kryo = new Kryo();
-        /*
-         * 不要轻易改变这里的配置！更改之后，序列化的格式就会发生变化，
-         * 上线的同时就必须清除 Redis 里的所有缓存，
-         * 否则那些缓存再回来反序列化的时候，就会报错
-         */
-        //支持对象循环引用（否则会栈溢出）
+    private static final ThreadLocal<Kryo> kryoThreadLocal = ThreadLocal.withInitial(() -> {
+        Kryo kryo = new Kryo();
         kryo.setReferences(true); //默认值就是 true，添加此行的目的是为了提醒维护者，不要改变这个配置
-        //不强制要求注册类（注册行为无法保证多个 JVM 内同一个类的注册编号相同；而且业务系统中大量的 Class 也难以一一注册）
         kryo.setRegistrationRequired(false); //默认值就是 false，添加此行的目的是为了提醒维护者，不要改变这个配置
-    }
+        return kryo;
+    });
 
     @Override
     public byte[] serialize(Object obj) {
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        Output output = new Output(bos);
-        kryo.writeClassAndObject(output, obj);
-        output.close();
-        return bos.toByteArray();
+        try (ByteArrayOutputStream bos = new ByteArrayOutputStream(); Output output = new Output(bos)) {
+            Kryo kryo = kryoThreadLocal.get();
+            kryo.writeClassAndObject(output, obj);
+            kryoThreadLocal.remove();
+            return output.toBytes();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
     public SysMessage deserialize(byte[] bytes, int msgType) {
-        ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
-        Input input = new Input(bis);
-        input.close();
-        return (SysMessage) kryo.readClassAndObject(input);
+        try (ByteArrayInputStream bis = new ByteArrayInputStream(bytes); Input input = new Input(bis)) {
+            Kryo kryo = kryoThreadLocal.get();
+            kryoThreadLocal.remove();
+            return (SysMessage) kryo.readClassAndObject(input);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override

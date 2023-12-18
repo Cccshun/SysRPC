@@ -1,6 +1,8 @@
 package stub;
 
 
+import common.exception.RpcError;
+import common.exception.RpcException;
 import register.Register;
 import register.ZkRegister;
 
@@ -30,6 +32,10 @@ public class ServiceProvider {
     }
 
     public Object getService(String interfaceName) {
-        return serviceProvider.get(interfaceName);
+        Object service = serviceProvider.get(interfaceName);
+        if (service == null) {
+            throw new RpcException(RpcError.SERVICE_NOT_FOUND);
+        }
+        return service;
     }
 }

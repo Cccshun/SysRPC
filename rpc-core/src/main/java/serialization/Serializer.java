@@ -1,6 +1,9 @@
 package serialization;
 
 import common.constants.SerializerType;
+import common.exception.RpcError;
+import common.exception.RpcException;
+import io.protostuff.Rpc;
 import protocol.SysMessage;
 
 public interface Serializer {
@@ -20,7 +23,7 @@ public interface Serializer {
         } else if (code == SerializerType.PROTOSTUFFERIALIZER) {
             return new ProtostuffSerializer();
         } else {
-            throw new RuntimeException("This serializer type is not supported");
+            throw new RpcException(RpcError.SERIALIZER_NOT_FOUND);
         }
     }
 }

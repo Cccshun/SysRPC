@@ -1,6 +1,6 @@
 package test.server;
 
-import io.NettyServer;
+import transport.netty.server.NettyServer;
 import service.impl.OpenServiceAImpl;
 import service.impl.OpenServiceBImpl;
 import stub.ServiceProvider;

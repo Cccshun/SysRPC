@@ -1,9 +1,8 @@
-package io;
+package transport.netty.server;
 
 import codec.SysDecode;
 import codec.SysEncode;
-import protocol.Request;
-import protocol.Response;
+import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -12,9 +11,9 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import stub.ServiceProvider;
+import transport.RPCServer;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @AllArgsConstructor
@@ -24,8 +23,8 @@ public class NettyServer implements RPCServer {
     @Override
     public void start(int port) {
         log.info("services start...");
-        NioEventLoopGroup boss = new NioEventLoopGroup(3);
-        NioEventLoopGroup worker = new NioEventLoopGroup();
+        NioEventLoopGroup boss = new NioEventLoopGroup(1);
+        NioEventLoopGroup worker = new NioEventLoopGroup(2);
         ServerBootstrap serverBootstrap = new ServerBootstrap();
         try {
             serverBootstrap.group(boss, worker)
@@ -36,12 +35,15 @@ public class NettyServer implements RPCServer {
                             ChannelPipeline pipeline = socketChannel.pipeline();
                             pipeline.addLast(new SysDecode())
                                     .addLast(new SysEncode())
+                                    .addLast(new IdleStateHandler(15, 0, 0, TimeUnit.SECONDS))
                                     .addLast(new NettyServerHandler(serviceProvider));
                         }
                     });
             ChannelFuture future = serverBootstrap.bind(port).sync();
             // 死循环监听
             future.channel().closeFuture().sync();
+            System.out.println(future);
+            log.info(Thread.currentThread().toString());
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         } finally {
@@ -52,36 +54,5 @@ public class NettyServer implements RPCServer {
 
     @Override
     public void stop() {
-
-    }
-
-    @AllArgsConstructor
-    private static class NettyServerHandler extends SimpleChannelInboundHandler<Request> {
-        ServiceProvider serviceProvider;
-
-        @Override
-        protected void channelRead0(ChannelHandlerContext ctx, Request request) {
-            Response response = this.getResponse(request);
-            ctx.writeAndFlush(response);
-            ctx.close();
-        }
-
-        @Override
-        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-            cause.printStackTrace();
-            ctx.close();
-        }
-
-        private Response getResponse(Request request) {
-            Object service = serviceProvider.getService(request.getInterfaceName());
-            try {
-                Method method = service.getClass().getMethod(request.getMethodName(), request.getParamsType());
-                Object result = method.invoke(service, request.getParams());
-                return Response.success(result);
-            } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
-                e.printStackTrace();
-                return Response.fail(e.toString());
-            }
-        }
     }
 }

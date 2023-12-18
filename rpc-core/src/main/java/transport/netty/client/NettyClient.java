@@ -1,8 +1,12 @@
-package io;
+package transport.netty.client;
 
 import codec.SysDecode;
 import codec.SysEncode;
 import common.constants.SerializerType;
+import common.exception.RpcError;
+import common.exception.RpcException;
+import io.netty.handler.timeout.IdleStateHandler;
+import protocol.HeartBeat;
 import protocol.Request;
 import protocol.Response;
 import io.netty.bootstrap.Bootstrap;
@@ -14,8 +18,12 @@ import io.netty.util.AttributeKey;
 import lombok.extern.slf4j.Slf4j;
 import register.Register;
 import register.ZkRegister;
+import transport.RPCClient;
 
 import java.net.InetSocketAddress;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 public class NettyClient implements RPCClient {
@@ -26,7 +34,7 @@ public class NettyClient implements RPCClient {
 
     public NettyClient() {
         register = new ZkRegister();
-        eventLoopGroup = new NioEventLoopGroup(2);
+        eventLoopGroup = new NioEventLoopGroup(1);
         bootstrap = new Bootstrap();
         bootstrap.group(eventLoopGroup)
                 .channel(NioSocketChannel.class)
@@ -36,6 +44,14 @@ public class NettyClient implements RPCClient {
                         ChannelPipeline pipeline = socketChannel.pipeline();
                         pipeline.addLast(new SysDecode())
                                 .addLast(new SysEncode(SerializerType.KRYOSERIALIZER))
+                                .addLast(new IdleStateHandler(0, 5, 0, TimeUnit.SECONDS))
+                                .addLast(new ChannelDuplexHandler(){
+                                    @Override
+                                    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                                        HeartBeat heartBeat = new HeartBeat();
+                                        ctx.writeAndFlush(heartBeat);
+                                    }
+                                })
                                 .addLast(new NettyClientHandler());
                     }
                 });
@@ -44,20 +60,26 @@ public class NettyClient implements RPCClient {
     @Override
     public Response sendRequest(Request request, int serialization) {
         InetSocketAddress address = register.serviceDiscovery(request.getInterfaceName());
-        Channel channel = null;
+        CompletableFuture<Response> responseFuture = new CompletableFuture<>();
+        Channel channel;
         try {
             ChannelFuture future = bootstrap.connect(address.getHostName(), address.getPort()).sync();
             channel = future.channel();
-            channel.writeAndFlush(request);
-            channel.closeFuture().sync();
-            AttributeKey<Response> key = AttributeKey.valueOf("Response");
-            return channel.attr(key).get();
-        } catch (InterruptedException e) {
+            channel.attr(AttributeKey.valueOf("Response")).set(responseFuture);
+            channel.writeAndFlush(request).addListener((ChannelFutureListener) channelFuture -> {
+                if (!channelFuture.isSuccess()) {
+                    future.channel().close();
+                    throw new RpcException(RpcError.REQUEST_SEND_FAIL);
+                }
+            });
+            return responseFuture.get();
+        } catch (InterruptedException | ExecutionException e) {
             e.printStackTrace();
             return Response.fail(e.toString());
         } finally {
-            if (channel != null)
-                channel.close();
+            // active disconnection after completing one call
+//            if (channel != null)
+//                channel.close();
         }
     }
 
@@ -65,21 +87,6 @@ public class NettyClient implements RPCClient {
     public void stop() {
         if (!eventLoopGroup.isShutdown()) {
             eventLoopGroup.shutdownGracefully();
-        }
-    }
-
-    private static class NettyClientHandler extends SimpleChannelInboundHandler<Response> {
-        @Override
-        protected void channelRead0(ChannelHandlerContext ctx, Response msg) {
-            AttributeKey<Response> key = AttributeKey.valueOf("Response");
-            ctx.channel().attr(key).set(msg);
-            ctx.close();
-        }
-
-        @Override
-        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-            cause.printStackTrace();
-            ctx.close();
         }
     }
 }
