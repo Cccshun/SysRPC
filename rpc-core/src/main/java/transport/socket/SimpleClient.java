@@ -1,7 +1,6 @@
 package transport.socket;
 
 import protocol.Request;
-import protocol.Response;
 import lombok.AllArgsConstructor;
 import register.Register;
 import register.ZkRegister;
@@ -23,7 +22,7 @@ public class SimpleClient implements RPCClient {
     }
 
     @Override
-    public Response sendRequest(Request request, int serialization) {
+    public Object sendRequest(Request request, int serialization) {
         InetSocketAddress address = register.serviceDiscovery(request.getInterfaceName());
         try {
             socket = new Socket(address.getHostName(), address.getPort());
@@ -34,7 +33,7 @@ public class SimpleClient implements RPCClient {
 
             // receive response message
             ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
-            return (Response) ois.readObject();
+            return ois.readObject();
         } catch (IOException | ClassNotFoundException e) {
             throw new RuntimeException(e);
         }

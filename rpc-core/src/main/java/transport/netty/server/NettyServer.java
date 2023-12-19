@@ -42,8 +42,6 @@ public class NettyServer implements RPCServer {
             ChannelFuture future = serverBootstrap.bind(port).sync();
             // 死循环监听
             future.channel().closeFuture().sync();
-            System.out.println(future);
-            log.info(Thread.currentThread().toString());
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         } finally {

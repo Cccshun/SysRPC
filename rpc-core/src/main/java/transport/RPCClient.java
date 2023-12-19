@@ -1,10 +1,11 @@
 package transport;
 
 import protocol.Request;
-import protocol.Response;
+
+import java.util.concurrent.ExecutionException;
 
 public interface RPCClient {
-    Response sendRequest(Request request, int serialization);
+    Object sendRequest(Request request, int serialization);
 
     void stop();
 }

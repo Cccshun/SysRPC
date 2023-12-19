@@ -1,5 +1,7 @@
 package register;
 
+import common.exception.RpcError;
+import common.exception.RpcException;
 import lombok.extern.slf4j.Slf4j;
 import balancer.LoadBalance;
 import balancer.RoundLoadBalance;
@@ -64,6 +66,9 @@ public class ZkRegister implements Register {
         String servicePath = "/" + serviceName;
         try {
             List<String> nodeList = client.getChildren().forPath(servicePath);
+            if (nodeList.isEmpty()) {
+                throw new RpcException(RpcError.SERVICE_NOT_FOUND);
+            }
             // get a service provider address
             String node = loadBalancer.balance(nodeList);
             return parseAddress(node);

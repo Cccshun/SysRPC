@@ -11,6 +11,8 @@ import lombok.extern.slf4j.Slf4j;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 @AllArgsConstructor
 @Slf4j
@@ -40,15 +42,26 @@ public class ClientStub implements InvocationHandler {
                 .interfaceName(method.getDeclaringClass().getName())
                 .methodName(method.getName())
                 .params(args)
-                .paramsType(method.getParameterTypes()).build();
+                .paramsType(method.getParameterTypes())
+                .build();
 
-        // 发送请求, 异步接收结果
-        Response response = rpcClient.sendRequest(request, serialization);
-        return response.getData();
+        if (rpcClient instanceof NettyClient) {
+            try {
+                // 发送请求, 异步接收结果
+                CompletableFuture<Response> response = (CompletableFuture<Response>) rpcClient.sendRequest(request, serialization);
+                return response.get().getData();
+            } catch (InterruptedException | ExecutionException e) {
+                throw new RuntimeException(e);
+            }
+        } else {
+            Response response = (Response) rpcClient.sendRequest(request, serialization);
+            return response.getData();
+        }
     }
 
+    @SuppressWarnings("unchecked")
     public <T> T getProxy(Class<T> clazz) {
-        return (T) Proxy.newProxyInstance(clazz.getClassLoader(), new Class[]{clazz}, this);
+        return (T) Proxy.newProxyInstance(clazz.getClassLoader(), new Class<?>[]{clazz}, this);
     }
 
     public void shutdown() {

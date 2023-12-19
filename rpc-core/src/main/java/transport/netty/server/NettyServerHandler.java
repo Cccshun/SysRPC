@@ -48,10 +48,10 @@ public class NettyServerHandler extends SimpleChannelInboundHandler<Request> {
         try {
             Method method = service.getClass().getMethod(request.getMethodName(), request.getParamsType());
             Object result = method.invoke(service, request.getParams());
-            return Response.success(result);
+            return Response.success(result, request.getRequestId());
         } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
             e.printStackTrace();
-            return Response.fail(e.toString());
+            return Response.fail(e.toString(), request.getRequestId());
         }
     }
 }
