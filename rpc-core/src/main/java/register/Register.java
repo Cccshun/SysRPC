@@ -1,5 +1,7 @@
 package register;
 
+import protocol.Request;
+
 import java.net.InetSocketAddress;
 
 /**
@@ -8,5 +10,5 @@ import java.net.InetSocketAddress;
 
 public interface Register {
     void serviceRegister(String serviceName, InetSocketAddress serviceAddress);
-    InetSocketAddress serviceDiscovery(String serviceName);
+    InetSocketAddress serviceDiscovery(Request request);
 }

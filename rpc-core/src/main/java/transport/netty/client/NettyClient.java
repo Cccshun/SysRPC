@@ -59,7 +59,7 @@ public class NettyClient implements RPCClient {
 
     @Override
     public Object sendRequest(Request request, int serialization) throws RuntimeException {
-        InetSocketAddress address = register.serviceDiscovery(request.getInterfaceName());
+        InetSocketAddress address = register.serviceDiscovery(request);
         CompletableFuture<Response> responseFuture = new CompletableFuture<>();
         requestsCache.put(request.getRequestId(), responseFuture);
         Channel channel = getChannel(address);

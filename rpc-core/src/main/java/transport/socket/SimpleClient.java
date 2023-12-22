@@ -23,7 +23,7 @@ public class SimpleClient implements RPCClient {
 
     @Override
     public Object sendRequest(Request request, int serialization) {
-        InetSocketAddress address = register.serviceDiscovery(request.getInterfaceName());
+        InetSocketAddress address = register.serviceDiscovery(request);
         try {
             socket = new Socket(address.getHostName(), address.getPort());
             // seed request message

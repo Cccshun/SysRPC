@@ -11,7 +11,7 @@ public class OpenServiceBImpl implements OpenServiceB {
     @Override
     public Blog queryBlog(int id) {
         log.info(Thread.currentThread().getName() + ": queryBlog, id:{}", id);
-        return new Blog(id, new Random().nextInt(10, 100), "<rpc blog>");
+        return new Blog(id, new Random().nextInt(100), "<rpc blog>");
     }
 
     @Override

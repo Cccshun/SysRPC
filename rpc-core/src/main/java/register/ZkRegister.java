@@ -1,15 +1,17 @@
 package register;
 
+import balance.LoadBalancer.ConsistentHashLoadBalance;
 import common.exception.RpcError;
 import common.exception.RpcException;
 import lombok.extern.slf4j.Slf4j;
-import balancer.LoadBalance;
-import balancer.RoundLoadBalance;
+import balance.LoadBalance;
+import balance.LoadBalancer.RoundLoadBalance;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
+import protocol.Request;
 
 import java.net.InetSocketAddress;
 import java.util.List;
@@ -28,7 +30,7 @@ public class ZkRegister implements Register {
                 .namespace(ROOT_PATH)
                 .build();
         client.start();
-        loadBalancer = new RoundLoadBalance();
+        loadBalancer = new ConsistentHashLoadBalance();
     }
 
     public ZkRegister(CuratorFramework curator) {
@@ -39,6 +41,17 @@ public class ZkRegister implements Register {
 
     public ZkRegister(CuratorFramework curator, LoadBalance loadBalancer) {
         client = curator;
+        client.start();
+        this.loadBalancer = loadBalancer;
+    }
+
+    public ZkRegister(LoadBalance loadBalancer) {
+        client = CuratorFrameworkFactory.builder()
+                .connectString("localhost")
+                .connectionTimeoutMs(4000)
+                .retryPolicy(new ExponentialBackoffRetry(1000, 3))
+                .namespace(ROOT_PATH)
+                .build();
         client.start();
         this.loadBalancer = loadBalancer;
     }
@@ -62,15 +75,15 @@ public class ZkRegister implements Register {
     }
 
     @Override
-    public InetSocketAddress serviceDiscovery(String serviceName) {
-        String servicePath = "/" + serviceName;
+    public InetSocketAddress serviceDiscovery(Request request) {
+        String servicePath = "/" + request.getInterfaceName();
         try {
             List<String> nodeList = client.getChildren().forPath(servicePath);
             if (nodeList.isEmpty()) {
                 throw new RpcException(RpcError.SERVICE_NOT_FOUND);
             }
             // get a service provider address
-            String node = loadBalancer.balance(nodeList);
+            String node = loadBalancer.selectServiceAddress(nodeList, request);
             return parseAddress(node);
         } catch (Exception e) {
             throw new RuntimeException(e);
