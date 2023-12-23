@@ -35,7 +35,8 @@ public class NettyServer implements RPCServer {
                             ChannelPipeline pipeline = socketChannel.pipeline();
                             pipeline.addLast(new SysDecode())
                                     .addLast(new SysEncode())
-                                    .addLast(new IdleStateHandler(15, 0, 0, TimeUnit.SECONDS))
+                                    // server executes read/write timeout with 20 second, 3*client < server
+                                    .addLast(new IdleStateHandler(0, 0, 20, TimeUnit.SECONDS))
                                     .addLast(new NettyServerHandler(serviceProvider));
                         }
                     });

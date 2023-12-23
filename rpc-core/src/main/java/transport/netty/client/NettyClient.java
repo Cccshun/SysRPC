@@ -7,7 +7,6 @@ import common.exception.RpcError;
 import common.exception.RpcException;
 import factory.SingletonFactory;
 import io.netty.handler.timeout.IdleStateHandler;
-import protocol.HeartBeat;
 import protocol.Request;
 import protocol.Response;
 import io.netty.bootstrap.Bootstrap;
@@ -21,6 +20,7 @@ import register.ZkRegister;
 import transport.RPCClient;
 
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -48,7 +48,8 @@ public class NettyClient implements RPCClient {
                         ChannelPipeline pipeline = socketChannel.pipeline();
                         pipeline.addLast(new SysDecode())
                                 .addLast(new SysEncode(SerializerType.KRYOSERIALIZER))
-                                .addLast(new IdleStateHandler(0, 5, 0, TimeUnit.SECONDS))
+                                // client executes read timeout with 5 seconds
+                                .addLast(new IdleStateHandler(5, 0, 0, TimeUnit.SECONDS))
                                 .addLast(new NettyClientHandler());
                     }
                 });
