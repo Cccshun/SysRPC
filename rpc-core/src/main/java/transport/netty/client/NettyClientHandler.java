@@ -9,7 +9,6 @@ import lombok.extern.slf4j.Slf4j;
 import protocol.HeartBeat;
 import protocol.Response;
 
-import java.net.SocketAddress;
 
 @Slf4j
 public class NettyClientHandler extends ChannelInboundHandlerAdapter {

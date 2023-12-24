@@ -46,13 +46,8 @@ public class ClientStub implements InvocationHandler {
                 .build();
 
         if (rpcClient instanceof NettyClient) {
-            try {
-                // 发送请求, 异步接收结果
-                CompletableFuture<Response> response = (CompletableFuture<Response>) rpcClient.sendRequest(request, serialization);
-                return response.get().getData();
-            } catch (InterruptedException | ExecutionException e) {
-                throw new RuntimeException(e);
-            }
+            // 发送请求, 异步接收结果
+            return rpcClient.sendRequest(request, serialization);
         } else {
             Response response = (Response) rpcClient.sendRequest(request, serialization);
             return response.getData();

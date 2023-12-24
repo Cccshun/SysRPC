@@ -9,13 +9,13 @@ import java.util.Random;
 @Slf4j
 public class OpenServiceAImpl implements OpenServiceA {
     @Override
-    public User queryUser(int id) {
+    public User queryUserSync(int id) {
         log.info(Thread.currentThread().getName() + ": queryUser, id:{}", id);
         return new User("zhangsan", id, new Random().nextInt(20));
     }
 
     @Override
-    public void insertUser(User user) {
+    public void insertUserSync(User user) {
         log.info(Thread.currentThread().getName() + ": insertUser, user:{}", user);
     }
 }

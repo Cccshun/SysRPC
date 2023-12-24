@@ -23,8 +23,8 @@ public class NettyServer implements RPCServer {
     @Override
     public void start(int port) {
         log.info("services start...");
-        NioEventLoopGroup boss = new NioEventLoopGroup(1);
-        NioEventLoopGroup worker = new NioEventLoopGroup(2);
+        NioEventLoopGroup boss = new NioEventLoopGroup(3);
+        NioEventLoopGroup worker = new NioEventLoopGroup();
         ServerBootstrap serverBootstrap = new ServerBootstrap();
         try {
             serverBootstrap.group(boss, worker)

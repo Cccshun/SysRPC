@@ -10,6 +10,8 @@ import stub.ServiceProvider;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 
 @Slf4j
@@ -33,7 +35,7 @@ public class NettyServerHandler extends ChannelInboundHandlerAdapter {
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
         if (msg instanceof Request) {
             Response response = this.getResponse((Request) msg);
-            ctx.writeAndFlush(response);
+            ctx.channel().writeAndFlush(response);
         }
         recordActivityTime();
     }
@@ -59,8 +61,12 @@ public class NettyServerHandler extends ChannelInboundHandlerAdapter {
         try {
             Method method = service.getClass().getMethod(request.getMethodName(), request.getParamsType());
             Object result = method.invoke(service, request.getParams());
-            return Response.success(result, request.getRequestId());
-        } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
+            if (result instanceof CompletableFuture<?>) {
+                return Response.success(((CompletableFuture<?>) result).get(), request.getRequestId());
+            } else {
+                return Response.success(result, request.getRequestId());
+            }
+        } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException |ExecutionException | InterruptedException e) {
             e.printStackTrace();
             return Response.fail(e.toString(), request.getRequestId());
         } finally {

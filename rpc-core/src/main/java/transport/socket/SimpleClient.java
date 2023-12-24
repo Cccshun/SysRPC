@@ -2,6 +2,7 @@ package transport.socket;
 
 import protocol.Request;
 import lombok.AllArgsConstructor;
+import protocol.Response;
 import register.Register;
 import register.ZkRegister;
 import transport.RPCClient;
@@ -11,6 +12,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.util.concurrent.CompletableFuture;
 
 @AllArgsConstructor
 public class SimpleClient implements RPCClient {

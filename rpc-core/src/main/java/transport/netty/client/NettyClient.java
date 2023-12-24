@@ -7,6 +7,7 @@ import common.exception.RpcError;
 import common.exception.RpcException;
 import factory.SingletonFactory;
 import io.netty.handler.timeout.IdleStateHandler;
+import lombok.SneakyThrows;
 import protocol.Request;
 import protocol.Response;
 import io.netty.bootstrap.Bootstrap;
@@ -20,7 +21,6 @@ import register.ZkRegister;
 import transport.RPCClient;
 
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -62,9 +62,9 @@ public class NettyClient implements RPCClient {
     public Object sendRequest(Request request, int serialization) throws RuntimeException {
         InetSocketAddress address = register.serviceDiscovery(request);
         CompletableFuture<Response> responseFuture = new CompletableFuture<>();
-        requestsCache.put(request.getRequestId(), responseFuture);
         Channel channel = getChannel(address);
-        if (channel.isActive()) {
+        if (channel != null && channel.isActive()) {
+            requestsCache.put(request.getRequestId(), responseFuture);
             channel.writeAndFlush(request).addListener((ChannelFutureListener) future -> {
                 if (future.isSuccess()) {
                     log.info("client send message [{}]", request);
